@@ -1,0 +1,11 @@
+# Python Dependencies for Task Tracker Backend
+
+python-dotenv==1.0.0
+# FastAPI - Modern web framework for building APIs
+fastapi==0.109.0
+# Uvicorn - ASGI server that runs FastAPI
+uvicorn[standard]==0.27.0
+# SQLAlchemy - Database toolkit and ORM (Object Relational Mapping)
+sqlalchemy==2.0.25
+# Pydantic - Data validation using Python type hints
+pydantic==2.5.3

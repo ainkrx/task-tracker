@@ -1,0 +1,129 @@
+@import "tailwindcss/utilities";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui;
+  background-color: ghostwhite;
+  color: #333;
+  line-height: 1.5;
+}
+
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.header h1 {
+  font-size: 2.5rem;
+  color: navy;
+}
+
+.header p {
+  color: darkblue;
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: blue;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.submit-btn:hover {
+  background-color: darkblue;
+}
+.submit-btn:active {
+  transform: translateY(2.5px);
+}
+
+.action-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.complete-btn {
+  background-color: green;
+}
+.complete-btn:hover {
+  background-color: darkgreen;
+}
+
+.delete-btn {
+  background-color: red;
+}
+.delete-btn:hover {
+  background-color: darkred;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 30px 0px;
+  color: gray;
+}
+
+.empty-state-icon {
+  font-size: 5rem;
+  margin-bottom: 10px;
+}
+
+.empty-state-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: gray;
+}
+
+.error {
+  background-color: lightpink;
+  color: red;
+  padding: 15px 20px;
+  border-radius: 5px;
+  margin-bottom: 20px;
+  border-left: 4px solid darkred;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: gainsboro;
+}
+::-webkit-scrollbar-thumb {
+  background: #a0a0a0;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: gray;
+}
+
+:focus-visible {
+  outline: 2px solid #70a2ff;
+  outline-offset: 1px;
+}
