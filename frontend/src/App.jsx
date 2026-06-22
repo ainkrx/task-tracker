@@ -177,7 +177,8 @@ function App() {
                     className="action-btn complete-btn"
                     onClick={() => toggleTaskCompletion(task.id, task.completed)}
                   >
-                    {task.completed ? '↩️ Undo' : '✅ Complete'}
+                    {task.completed ? '↩️ ' : '✅ '} 
+                    <span className='btn-label'>{task.completed ? 'Undo' : 'Complete'}</span>
                   </button>
 
                   {/* Delete button */}
@@ -185,7 +186,7 @@ function App() {
                     className="action-btn delete-btn"
                     onClick={() => deleteTask(task.id)}
                   >
-                    🗑️ Delete
+                    🗑️ <span className='btn-label'>Delete</span>
                   </button>
                 </div>
               </li>
