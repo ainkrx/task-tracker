@@ -1,5 +1,7 @@
 # 📝 Personal Task Tracker
 A simple full-stack web application for managing personal tasks. Built with **FastAPI** (Python) backend and **React** (JavaScript) frontend.
+## Development Methodology & Transparency
+This project is the result of a **"learning by doing"** approach to explore FastAPI and React. Throughout development, AI was used as a discussion partner to guide learning, allowing me to discuss ideas, evaluate the suggestions, and modify the code to fit my needs. This collaborative workflow made the learning process both efficient and highly hands-on.
 
 ---
 # Project Overview
