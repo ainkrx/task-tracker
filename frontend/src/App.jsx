@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -29,6 +29,8 @@ function App() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editTaskId, setEditTaskId] = useState(null);
+  const taskFormRef = useRef(null);
 
   useEffect(() => {
     fetchTasks();
@@ -290,7 +292,7 @@ function App() {
           <button 
             type="button" 
             onClick={() => setShowTagForm(false)} disabled={!showTagForm}
-            className={`rounded-r-lg px-5 py-1.5 text-md shadow-md transition
+            className={`rounded-r-lg px-5 py-1.5 text-sm shadow-md transition
               ${!showTagForm 
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-700 hover:bg-blue-900 text-white cursor-pointer'}
@@ -300,7 +302,7 @@ function App() {
           <button 
             type="button" 
             onClick={() => setShowTagForm(true)} disabled={showTagForm}
-            className={`rounded-r-lg px-2 py-1.5 text-md shadow-md transition 
+            className={`rounded-r-lg px-2 py-1.5 text-sm shadow-md transition 
               ${showTagForm 
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-700 hover:bg-blue-900 text-white cursor-pointer'}
@@ -424,7 +426,7 @@ function App() {
           <button
             type="button"
             onClick={() => setManageTagMode(false)} disabled={!manageTagMode}
-            className={`rounded-r-lg px-2 py-1.5 text-md shadow-md transition
+            className={`rounded-r-lg px-2 py-1.5 text-sm shadow-md transition
               ${!manageTagMode
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-700 hover:bg-blue-900 text-white cursor-pointer'}
@@ -434,7 +436,7 @@ function App() {
           <button
             type="button"
             onClick={() => setManageTagMode(true)} disabled={manageTagMode}
-            className={`rounded-r-lg px-2 py-1.5 text-md shadow-md transition
+            className={`rounded-r-lg px-2 py-1.5 text-sm shadow-md transition
               ${manageTagMode
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-700 hover:bg-blue-900 text-white cursor-pointer'}
@@ -477,6 +479,19 @@ function App() {
           ))}
         </div>
       </div>
+      <div className="flex gap-2 mb-4 -mt-4">
+        {['all', 'ongoing', 'overdue', 'completed'].map((status) => (
+          <button
+            key={status}
+            type="button"
+            onClick={() => setStatusFilter(status)}
+            className={`px-3 py-1 rounded-full text-sm capitalize cursor-pointer
+              ${statusFilter === status ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-700'}`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
       {error ? (
         <div className="bg-pink-200 text-red-500 px-5 py-4 rounded mb-5 border-l-4 border-red-500">
           ❌ {error}
@@ -489,98 +504,83 @@ function App() {
             <div className="text-center py-8 text-gray-500">
               <div className="text-7xl mb-2.5">🎉</div>
               <div className="text-2xl font-bold">No tasks yet!</div>
-              Add your first task above to get started.
+              Add your first task to get started.
             </div>
           ) : (
-            <>
-              <div className="flex gap-2 mb-4 -mt-4">
-                {['all', 'ongoing', 'overdue', 'completed'].map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => setStatusFilter(status)}
-                    className={`px-3 py-1 rounded-full text-sm capitalize cursor-pointer
-                      ${statusFilter === status ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-700'}`}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-              <ul className="task-list">
-                {getVisibleTasks().map((task) => (
-                  <li
-                    key={task.id}
-                    className={`bg-white p-5 rounded-xl shadow mb-5 flex items-center transition hover:-translate-y-1 hover:shadow-lg 
-                      ${task.completed ? 'opacity-80' : ''} 
-                      ${!task.completed && new Date(task.due_date) < new Date() ? 'border-l-4 border-red-500' : ''}
-                    `}
-                  >
-                    <div className="flex-1">
-                      <h3 className={`text-xl font-medium mb-1 
-                        ${task.completed ? 'line-through text-gray-500' : ''}
-                        `}
-                      >
-                        {task.title}
-                      </h3>
-                      {task.description && (
-                        <p className="text-base">
-                          {task.description}
-                        </p>
-                      )}
-                      {task.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {[...task.tags].sort((a, b) => a.name.localeCompare(b.name)).map((tag) => (
-                            <button
-                              key={tag.id}
-                              type="button"
-                              onClick={() => handleTagFilter(tag.id)}
-                              className={`px-2.5 py-1 border rounded-full text-sm cursor-pointer 
-                                ${filterTagIds.includes(tag.id)
-                                  ? 'bg-sky-600 text-white border-sky-600'
-                                  : 'bg-sky-50 text-sky-700 border-gray-300'
-                              }`}
-                            >
-                              #{tag.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <p className={`text-sm mr-2.5 
-                      ${!task.completed && new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-slate-600'}
+            <ul className="task-list">
+              {getVisibleTasks().map((task) => (
+                <li
+                  key={task.id}
+                  className={`bg-white p-5 rounded-xl shadow mb-5 flex items-center transition hover:-translate-y-1 hover:shadow-lg 
+                    ${task.completed ? 'opacity-80' : ''} 
+                    ${!task.completed && new Date(task.due_date) < new Date() ? 'border-l-4 border-red-500' : ''}
+                  `}
+                >
+                  <div className="flex-1">
+                    <h3 className={`text-xl font-medium mb-1 
+                      ${task.completed ? 'line-through text-gray-500' : ''}
                       `}
                     >
-                      {task.completed
-                        ? `✅ Done ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
-                        : new Date(task.due_date) < new Date()
-                        ? `⚠️ Overdue ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
-                        : `📅 Due ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
-                      }
-                    </p>
-                    <div className="flex gap-2.5">
-                      <button
-                        className={`${actionBtnStyle} bg-green-600 hover:bg-green-800`}
-                        onClick={() => toggleTaskCompletion(task.id, task.completed)}
-                      >
-                        {task.completed ? '↩️ ' : '✅ '}
-                        <span className="btn-label">
-                          {task.completed ? 'Undo' : 'Complete'}
-                        </span>
-                      </button>
-                      <button
-                        className={`${actionBtnStyle} bg-red-600 hover:bg-red-800`}
-                        onClick={() => deleteTask(task.id)}
-                      >
-                        🗑️ {" "}
-                        <span className="btn-label">
-                          Delete
-                        </span>
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
+                      {task.title}
+                    </h3>
+                    {task.description && (
+                      <p className="text-base">
+                        {task.description}
+                      </p>
+                    )}
+                    {task.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {[...task.tags].sort((a, b) => a.name.localeCompare(b.name)).map((tag) => (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => handleTagFilter(tag.id)}
+                            className={`px-2.5 py-1 border rounded-full text-sm cursor-pointer 
+                              ${filterTagIds.includes(tag.id)
+                                ? 'bg-sky-600 text-white border-sky-600'
+                                : 'bg-sky-50 text-sky-700 border-gray-300'
+                            }`}
+                          >
+                            #{tag.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className={`text-sm mr-2.5 
+                    ${!task.completed && new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-slate-600'}
+                    `}
+                  >
+                    {task.completed
+                      ? `✅ Done ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
+                      : new Date(task.due_date) < new Date()
+                      ? `⚠️ Overdue ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
+                      : `📅 Due ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
+                    }
+                  </p>
+                  <div className="flex gap-2.5">
+                    <button
+                      className={`${actionBtnStyle} bg-green-600 hover:bg-green-800`}
+                      onClick={() => toggleTaskCompletion(task.id, task.completed)}
+                    >
+                      {task.completed ? '↩️ ' : '✅ '}
+                      <span className="btn-label">
+                        {task.completed ? 'Undo' : 'Complete'}
+                      </span>
+                    </button>
+                    <button
+                      className={`${actionBtnStyle} bg-red-600 hover:bg-red-800`}
+                      onClick={() => deleteTask(task.id)}
+                    >
+                      🗑️ {" "}
+                      <span className="btn-label">
+                        Delete
+                      </span>
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )
         )
       )}

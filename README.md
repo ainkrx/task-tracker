@@ -50,11 +50,15 @@ task-tracker/
 # 🚀 Quick Start Guide
 Open Command Prompt
 ## Step 1: Install Backend
+```
 cd backend
 pip install -r requirements.txt
+```
 ## Step 2: Install Frontend
+```
 cd frontend
 npm install
+```
 ## Step 3: Set Up Environment Variables
 Copy `.env.example` to `.env` in both `backend/` and `frontend/`, then fill in the values.
 
@@ -62,12 +66,16 @@ Copy `.env.example` to `.env` in both `backend/` and `frontend/`, then fill in t
 # Start The App
 Open two Command Prompt windows.
 ## Step 1: Start Backend Server 
+```
 cd backend
 python -m uvicorn main:app --reload
+```
 ✅ Should see "Uvicorn running on http://127.0.0.1:8000"
 ## Step 2: Start Frontend
+```
 cd frontend
 npm run dev
+```
 ✅ Check terminal for the local URL (usually http://localhost:5173)
 
 ---
