@@ -43,8 +43,8 @@ function App() {
 
   const fetchTags = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/tags/`);
-      setTags(response.data);
+      let tags = (await axios.get(`${API_BASE_URL}/tags/`)).data;
+      setTags(tags);
     } catch (err) {
       console.error('Error fetching tags:', err);
     }
@@ -54,8 +54,8 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/tasks/`);
-      setTasks(response.data);
+      let tasks = (await axios.get(`${API_BASE_URL}/tasks/`)).data;
+      setTasks(tasks);
     } catch (err) {
       console.error('Error fetching tasks:', err);
       setError('Failed to load tasks. Make sure the backend is running.');
@@ -71,8 +71,8 @@ function App() {
         return {
           ...prev,
           [name]: checked
-            ? [...prev[name], value]
-            : prev[name].filter(v => v !== value)
+          ? [...prev[name], value]
+          : prev[name].filter(v => v !== value)
         };
       }
       return {
@@ -94,14 +94,9 @@ function App() {
     event.preventDefault();
     setFormError({});
     try {
-      const response = await axios.post(`${API_BASE_URL}/tasks/`, taskForm);
-      let newTask = response.data;
+      let newTask = (await axios.post(`${API_BASE_URL}/tasks/`, taskForm)).data;
       if (selectedTagIds.length > 0) {
-        const tagResponse = await axios.post(
-          `${API_BASE_URL}/tasks/${newTask.id}/tags`,
-          selectedTagIds
-        );
-        newTask = tagResponse.data;
+        newTask = (await axios.post(`${API_BASE_URL}/tasks/${newTask.id}/tags`, selectedTagIds)).data;
       }
       setTaskForm({
         title: '',
@@ -122,17 +117,61 @@ function App() {
     }
   };
 
+  const startEditTask = (task) => {
+    setEditTaskId(task.id);
+    setShowTagForm(false);
+    setTaskForm({
+      title: task.title,
+      description: task.description || '',
+      completed: task.completed,
+      due_date: task.due_date.slice(0, 16),
+    });
+    setSelectedTagIds(task.tags.map((tag) => tag.id));
+    taskFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const updateTask = async (event) => {
+    event.preventDefault();
+    setFormError({});
+    try {
+      let updatedTask = (await axios.put(`${API_BASE_URL}/tasks/${editTaskId}`, taskForm)).data;
+      const originalTask = tasks.find((task) => task.id === editTaskId);
+      const originalTagIds = originalTask ? originalTask.tags.map((tag) => tag.id) : [];
+      const tagToAdd = selectedTagIds.filter((id) => !originalTagIds.includes(id));
+      const tagToRemove = originalTagIds.filter((id) => !selectedTagIds.includes(id));
+      if (tagToAdd.length > 0) {
+        updatedTask = (await axios.post(`${API_BASE_URL}/tasks/${editTaskId}/tags`, tagToAdd)).data;
+      }
+      if (tagToRemove.length > 0) {
+        updatedTask = (await axios.delete(`${API_BASE_URL}/tasks/${editTaskId}/tags`, { data: tagToRemove })).data;
+      }
+      setTaskForm({
+        title: '',
+        description: '',
+        completed: false,
+        due_date: ''
+      });
+      setTasks(tasks.map((task) => (task.id === editTaskId ? updatedTask : task)));
+      setEditTaskId(null);
+      setSelectedTagIds([]);
+    } catch (err) {
+      console.error('Error updating task:', err);
+      alert('Failed to update task');
+      const errors = {};
+      err.response?.data?.detail?.forEach(d => {
+        errors[d.loc[1]] = d.msg;
+      });
+      setFormError(errors);
+    }
+  };
+
   const toggleTaskCompletion = async (taskId, currentStatus) => {
     try {
       const updateData = {
         completed: !currentStatus,
       };
-      const response = await axios.put(`${API_BASE_URL}/tasks/${taskId}`, updateData);
-      setTasks(
-        tasks.map((task) =>
-          task.id === taskId ? response.data : task
-        )
-      );
+      let updatedTask = (await axios.put(`${API_BASE_URL}/tasks/${taskId}`, updateData)).data;
+      setTasks(tasks.map((task) => task.id === taskId ? updatedTask : task));
     } catch (err) {
       console.error('Error updating task:', err);
       alert('Failed to update task');
@@ -145,54 +184,40 @@ function App() {
     }
     try {
       await axios.delete(`${API_BASE_URL}/tasks/${taskId}`);
-      setTasks(
-        tasks.filter((task) =>
-          task.id !== taskId
-        )
-      );
+      setTasks(tasks.filter((task) => task.id !== taskId));
     } catch (err) {
       console.error('Error deleting task:', err);
       alert('Failed to delete task');
     }
   };
-
-  const addTagsToTask = async (taskId, tagIds) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/tasks/${taskId}/tags/`);
-      setTasks(
-        tasks.map((task) =>
-          task.id === taskId ? response.data : task
-        )
-      );
-    } catch (err) {
-      console.error('Error adding tags to task:', err);
-      alert('Failed to add tags');
+  
+  const backButton = () => {
+    if (!window.confirm('Are you sure? All changes will be lost.')) {
+      return;
     }
-  };
-
-  const removeTagsFromTask = async (taskId, tagIds) => {
-    try {
-      const response = await axios.delete(`${API_BASE_URL}/tasks/${taskId}/tags/${tagId}`);
-      setTasks(
-        tasks.map((task) =>
-          task.id === taskId ? response.data : task
-        )
-      );
-    } catch (err) {
-      console.error('Error removing tags from task:', err);
-      alert('Failed to remove tags');
-    }
+    setFormError({});
+    setTaskForm({
+      title: '',
+      description: '',
+      completed: false,
+      due_date: ''
+    });
+    setTagForm({
+      name: ''
+    });
+    setEditTaskId(null);
+    setSelectedTagIds([]);
   };
 
   const createTag = async (event) => {
     event.preventDefault();
     setFormError({});
     try {
-      const response = await axios.post(`${API_BASE_URL}/tags/`, tagForm);
+      let newTag = (await axios.post(`${API_BASE_URL}/tags/`, tagForm)).data;
       setTagForm({
         name: ''
       });
-      setTags((prev) => [...prev, response.data]);
+      setTags((prev) => [...prev, newTag]);
     } catch (err) {
       if (err.response?.status === 409) {
         alert('That tag name already exists.');
@@ -206,17 +231,13 @@ function App() {
     }
   };
 
-  const updateTag = async (tagId, name) => {
+  const updateTag = async (tagId) => {
     if (!window.confirm('Are you sure you want to rename this tag? This action will also apply to all tasks associated with this tag.')) {
       return;
     }
     try {
-      const response = await axios.put(`${API_BASE_URL}/tags/${tagId}`, { name });
-      setTags(
-        tags.map((tag) =>
-          tag.id === tagId ? response.data : tag
-        )
-      );
+      let updatedTag = (await axios.put(`${API_BASE_URL}/tags/${tagId}`, tagForm)).data;
+      setTags(tags.map((tag) => tag.id === tagId ? updatedTag : tag));
       fetchTasks();
     } catch (err) {
       if (err.response?.status === 409) {
@@ -234,11 +255,7 @@ function App() {
     }
     try {
       await axios.delete(`${API_BASE_URL}/tags/${tagId}`);
-      setTags(
-        tags.filter((tag) =>
-          tag.id !== tagId
-        )
-      );
+      setTags(tags.filter((tag) => tag.id !== tagId));
       setFilterTagIds((prev) => prev.filter((id) => id !== tagId));
       fetchTasks();
     } catch (err) {
@@ -248,9 +265,7 @@ function App() {
   };
 
   const handleTagFilter = (tagId) => {
-    setFilterTagIds((prev) => (
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
-    ));
+    setFilterTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
   };
 
   const getVisibleTasks = () => {
@@ -275,7 +290,7 @@ function App() {
   const labelFormStyle = "block mb-2 font-medium";
   const inputFormStyle = "w-full px-4 py-2 border-2 border-gray-300 rounded transition-colors duration-500 focus:outline-none focus:border-sky-300";
   const errorFormStyle = "block text-red-500 text-xs -mt-2";
-  const actionBtnStyle = "px-4 py-2 rounded text-sm text-white cursor-pointer transition";
+  const actionBtnStyle = "px-4 py-2 rounded text-xs text-white cursor-pointer transition";
 
   return (
     <div className="max-w-4xl mx-auto p-20">
@@ -287,7 +302,7 @@ function App() {
           Organize your day, one task at a time
         </p>
       </header>
-      <div className="relative">
+      <div className="relative" ref={taskFormRef}>
         <div className="absolute left-full top-5 flex flex-col gap-5">
           <button 
             type="button" 
@@ -311,8 +326,17 @@ function App() {
           </button>
         </div>
         {!showTagForm && (
-          <form className="bg-white p-8 space-y-4 rounded-lg shadow-md mb-8" onSubmit={createTask}>
-            <label htmlFor="title" className={labelFormStyle}>
+          <form className="bg-white p-8 space-y-4 rounded-lg shadow-md mb-8" onSubmit={editTaskId ? updateTask : createTask}>
+            {editTaskId && (
+              <button
+                type="button"
+                onClick={backButton}
+                className="absolute top-3 left-3 px-3 py-1 rounded text-sm bg-gray-300 hover:bg-gray-400 text-gray-800 cursor-pointer transition"
+              >
+                ← Back
+              </button>
+            )}
+            <label htmlFor="title" className={`mt-3 ${labelFormStyle}`}>
               Task Title
             </label>
             <input
@@ -394,13 +418,15 @@ function App() {
               </div>
             </div>
             <button type="submit" className="w-full py-3 rounded bg-blue-700 hover:bg-blue-900 text-white font-bold cursor-pointer transition">
-              Add Task
+              {editTaskId ? 'Update Task' : 'Add Task'}
             </button>
           </form>
         )}
         {showTagForm && (
           <form className="bg-white p-8 space-y-4 rounded-lg shadow-md mb-8" onSubmit={createTag}>
-            <label htmlFor="tagName" className={labelFormStyle}>Tag Name</label>
+            <label htmlFor="tagName" className={`mt-3 ${labelFormStyle}`}>
+              Tag Name
+            </label>
             <input
               type="text"
               id="tagName"
@@ -559,6 +585,12 @@ function App() {
                     }
                   </p>
                   <div className="flex gap-2.5">
+                    <button
+                      className={`${actionBtnStyle} bg-amber-600 hover:bg-amber-800`}
+                      onClick={() => startEditTask(task)}
+                    >
+                      ✏️ <span className="btn-label">Edit</span>
+                    </button>
                     <button
                       className={`${actionBtnStyle} bg-green-600 hover:bg-green-800`}
                       onClick={() => toggleTaskCompletion(task.id, task.completed)}
