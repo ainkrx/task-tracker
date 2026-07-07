@@ -30,7 +30,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editTaskId, setEditTaskId] = useState(null);
-  const taskFormRef = useRef(null);
+  const [editTagId, setEditTagId] = useState(null);
+  const formRef = useRef(null);
 
   useEffect(() => {
     fetchTasks();
@@ -127,7 +128,7 @@ function App() {
       due_date: task.due_date.slice(0, 16),
     });
     setSelectedTagIds(task.tags.map((tag) => tag.id));
-    taskFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+    formRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const updateTask = async (event) => {
@@ -206,6 +207,7 @@ function App() {
       name: ''
     });
     setEditTaskId(null);
+    setEditTagId(null);
     setSelectedTagIds([]);
   };
 
@@ -230,21 +232,44 @@ function App() {
       }
     }
   };
+  
+  const startEditTag = (tag) => {
+    setEditTagId(tag.id);
+    setShowTagForm(true);
+    setTagForm({
+      name: tag.name,
+    });
+    formRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  const updateTag = async (tagId) => {
+  const updateTag = async (event) => {
+    event.preventDefault();
+    setFormError({});
     if (!window.confirm('Are you sure you want to rename this tag? This action will also apply to all tasks associated with this tag.')) {
       return;
     }
     try {
-      let updatedTag = (await axios.put(`${API_BASE_URL}/tags/${tagId}`, tagForm)).data;
-      setTags(tags.map((tag) => tag.id === tagId ? updatedTag : tag));
-      fetchTasks();
+      let updatedTag = (await axios.put(`${API_BASE_URL}/tags/${editTagId}`, tagForm)).data;
+      setTagForm({
+        name: ''
+      });
+      setTags(tags.map((tag) => tag.id === editTagId ? updatedTag : tag));
+      setTasks(tasks.map((task) => ({ 
+        ...task, 
+        tags: task.tags.map((tag) => (tag.id === editTagId ? updatedTag : tag)) 
+      })));
+      setEditTagId(null);
     } catch (err) {
       if (err.response?.status === 409) {
         alert('That tag name already exists.');
       } else {
         console.error('Error updating tag:', err);
         alert('Failed to update tag');
+        const errors = {};
+        err.response?.data?.detail?.forEach(d => {
+          errors[d.loc[1]] = d.msg;
+        });
+        setFormError(errors);
       }
     }
   };
@@ -302,7 +327,7 @@ function App() {
           Organize your day, one task at a time
         </p>
       </header>
-      <div className="relative" ref={taskFormRef}>
+      <div className="relative" ref={formRef}>
         <div className="absolute left-full top-5 flex flex-col gap-5">
           <button 
             type="button" 
@@ -325,17 +350,17 @@ function App() {
             Add Tag
           </button>
         </div>
+        {((editTaskId && !showTagForm) || (editTagId && showTagForm)) && (
+          <button
+            type="button"
+            onClick={backButton}
+            className="absolute top-3 left-3 px-3 py-1 rounded text-sm bg-gray-300 hover:bg-gray-400 text-gray-800 cursor-pointer transition"
+          >
+            ← Back
+          </button>
+        )}
         {!showTagForm && (
           <form className="bg-white p-8 space-y-4 rounded-lg shadow-md mb-8" onSubmit={editTaskId ? updateTask : createTask}>
-            {editTaskId && (
-              <button
-                type="button"
-                onClick={backButton}
-                className="absolute top-3 left-3 px-3 py-1 rounded text-sm bg-gray-300 hover:bg-gray-400 text-gray-800 cursor-pointer transition"
-              >
-                ← Back
-              </button>
-            )}
             <label htmlFor="title" className={`mt-3 ${labelFormStyle}`}>
               Task Title
             </label>
@@ -423,7 +448,7 @@ function App() {
           </form>
         )}
         {showTagForm && (
-          <form className="bg-white p-8 space-y-4 rounded-lg shadow-md mb-8" onSubmit={createTag}>
+          <form className="bg-white p-8 space-y-4 rounded-lg shadow-md mb-8" onSubmit={editTagId ? updateTag : createTag}>
             <label htmlFor="tagName" className={`mt-3 ${labelFormStyle}`}>
               Tag Name
             </label>
@@ -442,7 +467,7 @@ function App() {
               {formError.name}
             </span>}
             <button type="submit" className="w-full py-3 rounded bg-blue-700 hover:bg-blue-900 text-white font-bold cursor-pointer transition">
-              Add Tag
+              {editTagId ? 'Update Tag' : 'Add Tag'}
             </button>
           </form>
         )}
@@ -494,6 +519,15 @@ function App() {
               #{tag.name}
               <button
                 type="button"
+                onClick={(e) => { e.stopPropagation(); startEditTag(tag); }}
+                className={`text-amber-600 cursor-pointer transition-all duration-150 
+                  ${manageTagMode ? 'opacity-100 max-w-5' : 'opacity-0 max-w-0 pointer-events-none'
+                }`}
+              >
+                ✏️
+              </button>
+              <button
+                type="button"
                 onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); }}
                 className={`text-red-500 cursor-pointer transition-all duration-150 
                   ${manageTagMode ? 'opacity-100 max-w-5' : 'opacity-0 max-w-0 pointer-events-none'
@@ -537,79 +571,81 @@ function App() {
               {getVisibleTasks().map((task) => (
                 <li
                   key={task.id}
-                  className={`bg-white p-5 rounded-xl shadow mb-5 flex items-center transition hover:-translate-y-1 hover:shadow-lg 
+                  className={`bg-white p-5 rounded-xl shadow mb-5 transition hover:-translate-y-1 hover:shadow-lg border-l-4
                     ${task.completed ? 'opacity-80' : ''} 
-                    ${!task.completed && new Date(task.due_date) < new Date() ? 'border-l-4 border-red-500' : ''}
+                    ${!task.completed && new Date(task.due_date) < new Date() ? 'border-red-500' : 'border-white'}
                   `}
                 >
-                  <div className="flex-1">
-                    <h3 className={`text-xl font-medium mb-1 
-                      ${task.completed ? 'line-through text-gray-500' : ''}
+                  <div className="flex items-center">
+                    <div className="flex-1">
+                      <h3 className={`text-xl font-medium mb-1 
+                        ${task.completed ? 'line-through text-gray-500' : ''}
+                        `}
+                      >
+                        {task.title}
+                      </h3>
+                    </div>
+                    <p className={`text-sm mr-2.5 text-right 
+                      ${!task.completed && new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-slate-600'}
                       `}
                     >
-                      {task.title}
-                    </h3>
-                    {task.description && (
-                      <p className="text-base">
-                        {task.description}
-                      </p>
-                    )}
-                    {task.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {[...task.tags].sort((a, b) => a.name.localeCompare(b.name)).map((tag) => (
-                          <button
-                            key={tag.id}
-                            type="button"
-                            onClick={() => handleTagFilter(tag.id)}
-                            className={`px-2.5 py-1 border rounded-full text-sm cursor-pointer 
-                              ${filterTagIds.includes(tag.id)
-                                ? 'bg-sky-600 text-white border-sky-600'
-                                : 'bg-sky-50 text-sky-700 border-gray-300'
-                            }`}
-                          >
-                            #{tag.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                      {task.completed
+                        ? `✅ Done` : new Date(task.due_date) < new Date()
+                        ? `⚠️ Overdue`
+                        : `📅 Due`
+                      }
+                      <br></br>{new Date(task.due_date).toLocaleString().slice(0, -3)}
+                    </p>
+                    <div className="flex gap-2.5">
+                      <button
+                        className={`${actionBtnStyle} bg-amber-600 hover:bg-amber-800`}
+                        onClick={() => startEditTask(task)}
+                      >
+                        ✏️ <span className="btn-label">Edit</span>
+                      </button>
+                      <button
+                        className={`${actionBtnStyle} bg-green-600 hover:bg-green-800`}
+                        onClick={() => toggleTaskCompletion(task.id, task.completed)}
+                      >
+                        {task.completed ? '↩️ ' : '✅ '}
+                        <span className="btn-label">
+                          {task.completed ? 'Undo' : 'Done'}
+                        </span>
+                      </button>
+                      <button
+                        className={`${actionBtnStyle} bg-red-600 hover:bg-red-800`}
+                        onClick={() => deleteTask(task.id)}
+                      >
+                        🗑️ {" "}
+                        <span className="btn-label">
+                          Delete
+                        </span>
+                      </button>
+                    </div>
                   </div>
-                  <p className={`text-sm mr-2.5 
-                    ${!task.completed && new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-slate-600'}
-                    `}
-                  >
-                    {task.completed
-                      ? `✅ Done ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
-                      : new Date(task.due_date) < new Date()
-                      ? `⚠️ Overdue ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
-                      : `📅 Due ${new Date(task.due_date).toLocaleString().slice(0, -3)}`
-                    }
-                  </p>
-                  <div className="flex gap-2.5">
-                    <button
-                      className={`${actionBtnStyle} bg-amber-600 hover:bg-amber-800`}
-                      onClick={() => startEditTask(task)}
-                    >
-                      ✏️ <span className="btn-label">Edit</span>
-                    </button>
-                    <button
-                      className={`${actionBtnStyle} bg-green-600 hover:bg-green-800`}
-                      onClick={() => toggleTaskCompletion(task.id, task.completed)}
-                    >
-                      {task.completed ? '↩️ ' : '✅ '}
-                      <span className="btn-label">
-                        {task.completed ? 'Undo' : 'Complete'}
-                      </span>
-                    </button>
-                    <button
-                      className={`${actionBtnStyle} bg-red-600 hover:bg-red-800`}
-                      onClick={() => deleteTask(task.id)}
-                    >
-                      🗑️ {" "}
-                      <span className="btn-label">
-                        Delete
-                      </span>
-                    </button>
-                  </div>
+                  {task.description && (
+                    <p className="text-base max-w-[55%]">
+                      {task.description}
+                    </p>
+                  )}
+                  {task.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {[...task.tags].sort((a, b) => a.name.localeCompare(b.name)).map((tag) => (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => handleTagFilter(tag.id)}
+                          className={`px-2.5 py-1 border rounded-full text-sm cursor-pointer 
+                            ${filterTagIds.includes(tag.id)
+                              ? 'bg-sky-600 text-white border-sky-600'
+                              : 'bg-sky-50 text-sky-700 border-gray-300'
+                          }`}
+                        >
+                          #{tag.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

@@ -37,13 +37,13 @@ task_tags = Table(
 )
 
 class TagValidation(BaseModel):
-    name: str = Field(min_length=1, max_length=50)
+    name: str = Field(min_length=3, max_length=10)
 
 class TagCreate(TagValidation):
     pass
 
 class TagUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=50) 
+    name: str | None = Field(default=None, min_length=3, max_length=10) 
 
 class Tag(BaseModel):
     id: int
@@ -64,8 +64,8 @@ class TaskTable(Base):
     created_at = Column(DateTime, default=datetime.now)
 
 class TaskValidation(BaseModel):
-    title: str = Field(min_length=3, max_length=100)
-    description: str | None = Field(default=None, max_length=500)
+    title: str = Field(min_length=3, max_length=15)
+    description: str | None = Field(default=None, max_length=100)
     completed: bool
     due_date: datetime
 
@@ -73,8 +73,8 @@ class TaskCreate(TaskValidation):
     pass
 
 class TaskUpdate(TaskValidation):
-    title: str | None = Field(default=None, min_length=3, max_length=100)
-    description: str | None = Field(default=None, max_length=500)
+    title: str | None = Field(default=None, min_length=3, max_length=15)
+    description: str | None = Field(default=None, max_length=100)
     completed: bool | None = Field(default=None)
     due_date: datetime | None = Field(default=None)
 
