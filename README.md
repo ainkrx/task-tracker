@@ -1,5 +1,7 @@
 # 📝 Personal Task Tracker
 A simple full-stack web application for managing personal tasks. Built with **FastAPI** (Python) backend and **React** (JavaScript) frontend.
+🔗 **Live Demo:** https://task-tracker-vfe.vercel.app
+Developed on **Vercel** and the database runs on **Neon** (PostgreSQL).
 ## Development Methodology & Transparency
 This project is the result of a **"learning by doing"** approach to explore FastAPI and React. Throughout development, AI was used as a discussion partner to guide learning, allowing me to discuss ideas, evaluate the suggestions, and modify the code to fit my needs. This collaborative workflow made the learning process both efficient and highly hands-on.
 
@@ -13,7 +15,6 @@ This project is the result of a **"learning by doing"** approach to explore Fast
 - Conditional rendering
 - Form handling
 - Styling with Tailwind CSS utility classes
-
 ## Backend (FastAPI/Python)
 - REST API design (GET, POST, PUT, DELETE)
 - Database operations with SQLAlchemy
@@ -25,7 +26,7 @@ This project is the result of a **"learning by doing"** approach to explore Fast
 ```
 task-tracker/
 ├── backend/
-│   ├── main.py              # FastAPI application (all backend code)
+│   ├── app.py               # FastAPI application (all backend code)
 │   ├── tasks.db             # SQLite database (created automatically)
 │   ├── requirements.txt     # Python dependencies
 │   ├── .env                 # Environment variables (not committed)
@@ -70,17 +71,20 @@ Open two Command Prompt windows.
 cd backend
 python -m uvicorn main:app --reload
 ```
-✅ Should see "Uvicorn running on http://127.0.0.1:8000"
 ## Step 2: Start Frontend
 ```
 cd frontend
 npm run dev
 ```
-✅ Check terminal for the local URL (usually http://localhost:5173)
 
 ---
 # 🎮 Test the App
-1. **Add a task**: Type "Learn FastAPI" and click "Add Task"
-2. **Complete it**: Click "✅ Complete" button
+1. **Add a task**: Click "Add Task", fill the form and attach tags if needed, click "Add Task"
+2. **Complete it**: Click "✅ Done" button
 3. **Delete it**: Click "🗑️ Delete" button
-4. **View API docs**: Open http://localhost:8000/docs
+4. **Undo completion**: Click "↩️ Undo" on a completed task
+5. **Edit a task**: Click "✏️ Edit", update the fields, click "Update Task"
+6. **Add a tag**: Click "Add Tag", fill the form, click "Add Tag"
+7. **Attach tags**: While adding/editing a task, search and select tag(s)
+8. **Filter tasks**: Use the status buttons (All / Ongoing / Overdue / Completed) or click a tag to filter
+9. **Manage tags**: Click "Manage Tags", then ✏️ edit or × delete a tag

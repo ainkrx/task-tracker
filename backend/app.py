@@ -4,27 +4,83 @@ from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 from dotenv import load_dotenv
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer
+from jose import jwt, JWTError
 import os
 
 load_dotenv()
 
-# SQLite
-# DATABASE_URL = "sqlite:///./tasks.db"
-# engine = create_engine(
-#     DATABASE_URL,
-#     # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-an-engine
-#     # 1 request session per thread
-#     connect_args={"check_same_thread": False}
-# )
-# neon
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 5
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+def verify_password(plain: str, hashed: str):
+    return pwd_context.verify(plain, hashed)
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    to_encode["exp"] = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+# SQLite
+engine = create_engine(
+    DATABASE_URL,
+    # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-an-engine
+    # 1 request session per thread
+    connect_args={"check_same_thread": False}
+)
+# neon
+# engine = create_engine(DATABASE_URL)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# user
+class UserTable(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
+
+class UserValidation(BaseModel):
+    name: str = Field(min_length=3, max_length=50)
+    email: str
+    password: str = Field(min_length=8)
+
+class UserCreate(UserValidation):
+    pass
+
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=3, max_length=50)
+    email: str | None = None
+    password: str | None = Field(default=None, min_length=8)
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class User(BaseModel):
+    id: int
+    name: str
+    email: str
+
+    class Config:
+        from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 # tag
 class TagTable(Base):
@@ -125,19 +181,84 @@ def get_db():
     finally:
         db.close()
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+def get_curr_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token.")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    user = db.query(UserTable).filter(UserTable.id == int(user_id)).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found.")
+    return user
+
+# user
+@app.post("/register", response_model=User)
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(UserTable).filter(UserTable.email == user.email).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already registered.")
+    curr_user = UserTable(
+        name=user.name,
+        email=user.email,
+        password_hash=hash_password(user.password)
+    )
+    db.add(curr_user)
+    db.commit()
+    db.refresh(curr_user)
+    return curr_user
+
+@app.post("/login", response_model=Token)
+def login(credentials: UserLogin, db: Session = Depends(get_db)):
+    curr_user = db.query(UserTable).filter(UserTable.email == credentials.email).first()
+    if not curr_user or not verify_password(credentials.password, curr_user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    token = create_access_token({"sub": str(curr_user.id)})
+    return {"access_token": token, "token_type": "bearer"}
+
+@app.get("/profile", response_model=User)
+def get_profile(curr_user: UserTable = Depends(get_curr_user)):
+    return curr_user
+
+@app.put("/profile", response_model=User)
+def update_profile(user_update: UserUpdate, curr_user: UserTable = Depends(get_curr_user), db: Session = Depends(get_db)):
+    isChanged = False
+    for field in ["name", "email", "password"]:
+        updated_val = getattr(user_update, field)
+        if updated_val is not None:
+            if field == "email" and updated_val != getattr(curr_user, field):
+                clash = db.query(UserTable).filter(
+                    UserTable.email == updated_val,
+                    UserTable.id != curr_user.id
+                ).first()
+                if clash:
+                    raise HTTPException(status_code=409, detail="Email already in use.")
+            if field != "password":
+                setattr(curr_user, field, updated_val)
+            else:
+                curr_user.password_hash = hash_password(updated_val)
+            isChanged = True
+    if isChanged:
+        db.commit()
+        db.refresh(curr_user)
+    return curr_user
+
 # task
 @app.post("/tasks/", response_model=Task)
 def create_task(task: TaskCreate, db: Session = Depends(get_db)):
-    db_task = TaskTable(
+    curr_task = TaskTable(
         title=task.title,
         description=task.description,
         completed=task.completed,
         due_date=task.due_date
     )
-    db.add(db_task)
+    db.add(curr_task)
     db.commit()
-    db.refresh(db_task)
-    return db_task
+    db.refresh(curr_task)
+    return curr_task
 
 @app.get("/tasks/", response_model=List[Task])
 def get_tasks(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -155,40 +276,38 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
 
 @app.put("/tasks/{task_id}", response_model=Task)
 def update_task(task_id: int, task_update: TaskUpdate, db: Session = Depends(get_db)):
-    db_task = get_task(task_id, db)
-    changed = False
+    curr_task = get_task(task_id, db)
+    isChanged = False
     for field in ["title", "description", "completed", "due_date"]:
         updated_val = getattr(task_update, field)
-        if updated_val is not None and updated_val != getattr(db_task, field):
-            setattr(db_task, field, updated_val)
-            changed = True
-    if changed:
+        if updated_val is not None and updated_val != getattr(curr_task, field):
+            setattr(curr_task, field, updated_val)
+            isChanged = True
+    if isChanged:
         db.commit()
-        db.refresh(db_task)
-    return db_task
+        db.refresh(curr_task)
+    return curr_task
 
 @app.delete("/tasks/{task_id}")
 def delete_task(task_id: int, db: Session = Depends(get_db)):
-    db_task = get_task(task_id, db)
-    db.delete(db_task)
+    curr_task = get_task(task_id, db)
+    db.delete(curr_task)
     db.commit()
     return
 
 # tag
 @app.post("/tags/", response_model=Tag)
 def create_tag(tag: TagCreate, db: Session = Depends(get_db)):
-    existing = db.query(TagTable).filter(
-        TagTable.name == tag.name
-    ).first()
+    existing = db.query(TagTable).filter(TagTable.name == tag.name).first()
     if existing:
         raise HTTPException(status_code=409, detail="Tag name already exists.")
-    db_tag = TagTable(
+    curr_tag = TagTable(
         name=tag.name
     )
-    db.add(db_tag)
+    db.add(curr_tag)
     db.commit()
-    db.refresh(db_tag)
-    return db_tag
+    db.refresh(curr_tag)
+    return curr_tag
 
 @app.get("/tags/", response_model=List[Tag])
 def get_tags(db: Session = Depends(get_db)):
@@ -205,48 +324,48 @@ def get_tag(tag_id: int, db: Session = Depends(get_db)):
 
 @app.put("/tags/{tag_id}", response_model=Tag)
 def update_tag(tag_id: int, tag_update: TagUpdate, db: Session = Depends(get_db)):
-    db_tag = get_tag(tag_id, db)
-    if tag_update.name is not None and tag_update.name != db_tag.name:
+    curr_tag = get_tag(tag_id, db)
+    if tag_update.name is not None and tag_update.name != curr_tag.name:
         clash = db.query(TagTable).filter(
             TagTable.name == tag_update.name,
             TagTable.id != tag_id
         ).first()
         if clash:
             raise HTTPException(status_code=409, detail="Tag name already exists.")
-        db_tag.name = tag_update.name
+        curr_tag.name = tag_update.name
         db.commit()
-        db.refresh(db_tag)
-    return db_tag
+        db.refresh(curr_tag)
+    return curr_tag
 
 @app.delete("/tags/{tag_id}")
 def delete_tag(tag_id: int, db: Session = Depends(get_db)):
-    db_tag = get_tag(tag_id, db)
-    db.delete(db_tag)
+    curr_tag = get_tag(tag_id, db)
+    db.delete(curr_tag)
     db.commit()
     return
 
 # task and tag
 @app.post("/tasks/{task_id}/tags", response_model=Task)
 def add_tags_to_task(task_id: int, tag_ids: List[int], db: Session = Depends(get_db)):
-    db_task = get_task(task_id, db)
+    curr_task = get_task(task_id, db)
     tags = db.query(TagTable).filter(TagTable.id.in_(tag_ids)).all()
     for tag in tags:
-        if tag not in db_task.tags:
-            db_task.tags.append(tag)
+        if tag not in curr_task.tags:
+            curr_task.tags.append(tag)
     db.commit()
-    db.refresh(db_task)
-    return db_task
+    db.refresh(curr_task)
+    return curr_task
 
 @app.delete("/tasks/{task_id}/tags", response_model=Task)
 def remove_tags_from_task(task_id: int, tag_ids: List[int], db: Session = Depends(get_db)):
-    db_task = get_task(task_id, db)
+    curr_task = get_task(task_id, db)
     tags = db.query(TagTable).filter(TagTable.id.in_(tag_ids)).all()
     for tag in tags:
-        if tag in db_task.tags:
-            db_task.tags.remove(tag)
+        if tag in curr_task.tags:
+            curr_task.tags.remove(tag)
     db.commit()
-    db.refresh(db_task)
-    return db_task
+    db.refresh(curr_task)
+    return curr_task
 
 @app.get("/")
 def root():
