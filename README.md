@@ -1,11 +1,10 @@
 # 📝 Personal Task Tracker
-A simple full-stack web application for managing personal tasks. Built with **FastAPI** (Python) backend and **React** (JavaScript) frontend.
-🔗 **Live Demo:** https://task-tracker-vfe.vercel.app
+A simple full-stack web application for managing personal tasks. Built with **FastAPI** (Python) backend and **React** (JavaScript) frontend.  
+🔗 **Live Demo:** https://task-tracker-vfe.vercel.app  
 Developed on **Vercel** and the database runs on **Neon** (PostgreSQL).
 ## Development Methodology & Transparency
 This project is the result of a **"learning by doing"** approach to explore FastAPI and React. Throughout development, AI was used as a discussion partner to guide learning, allowing me to discuss ideas, evaluate the suggestions, and modify the code to fit my needs. This collaborative workflow made the learning process both efficient and highly hands-on.
 
----
 # Project Overview
 ## Frontend (React, using Vite)
 - React components and JSX
@@ -37,17 +36,31 @@ task-tracker/
     ├── vite.config.js       # Vite + Tailwind configuration
     ├── package.json         # Node.js dependencies
     ├── eslint.config.js     # ESLint configuration
-    ├── .env.                # Environment variables (not committed)
+    ├── .env                 # Environment variables (not committed)
     ├── .env.example         # Template for .env
     ├── public/
     │   └── favicon.svg
     └── src/
-        ├── main.jsx         # React entry point
-        ├── index.css        # Global styles + Tailwind directives
-        └── App.jsx          # Main React component
+        ├── main.jsx           # React entry point
+        ├── index.css          # Global styles + Tailwind directives
+        ├── App.jsx            # Root component (shell / temporary render of Tasks)
+        ├── api/
+        │   └── client.js      # axios instance + API_BASE_URL
+        ├── components/
+        │   ├── Navbar.jsx
+        │   ├── TaskForm.jsx
+        │   ├── TaskList.jsx
+        │   ├── TagForm.jsx
+        │   └── TagFilterBar.jsx
+        ├── pages/
+        │   ├── Login.jsx
+        │   ├── Register.jsx
+        │   ├── Profile.jsx
+        │   └── Tasks.jsx      # task list + forms (moved from App.jsx)
+        └── styles/
+            └── formStyles.js  # shared Tailwind class strings for forms
 ```
 
----
 # 🚀 Quick Start Guide
 Open Command Prompt
 ## Step 1: Install Backend
@@ -63,13 +76,12 @@ npm install
 ## Step 3: Set Up Environment Variables
 Copy `.env.example` to `.env` in both `backend/` and `frontend/`, then fill in the values.
 
----
 # Start The App
 Open two Command Prompt windows.
 ## Step 1: Start Backend Server 
 ```
 cd backend
-python -m uvicorn main:app --reload
+python -m uvicorn app:app --reload
 ```
 ## Step 2: Start Frontend
 ```
@@ -77,7 +89,6 @@ cd frontend
 npm run dev
 ```
 
----
 # 🎮 Test the App
 1. **Add a task**: Click "Add Task", fill the form and attach tags if needed, click "Add Task"
 2. **Complete it**: Click "✅ Done" button
