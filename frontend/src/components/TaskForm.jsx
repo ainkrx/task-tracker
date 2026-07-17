@@ -2,7 +2,7 @@ import * as formStyles from '../styles/formStyles';
 
 function TaskForm({
   taskForm,
-  handleTaskInputChange,
+  setTaskForm,
   formError,
   editingId,
   onSubmit,
@@ -12,6 +12,24 @@ function TaskForm({
   selectedTagIds,
   setSelectedTagIds,
 }) {
+  const handleTaskInputChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setTaskForm((prev) => {
+      if (type === 'checkbox' && Array.isArray(prev[name])) {
+        return {
+          ...prev,
+          [name]: checked
+          ? [...prev[name], value]
+          : prev[name].filter(v => v !== value)
+        };
+      }
+      return {
+        ...prev,
+        [name]: value
+      };
+    });
+  };
+  
   return (
     <form className="bg-white p-8 space-y-4 rounded-lg shadow-md mb-8" onSubmit={onSubmit}>
       <label htmlFor="title" className={`mt-3 ${formStyles.labelFormStyle}`}>
@@ -27,10 +45,11 @@ function TaskForm({
         required
         className={formStyles.inputFormStyle}
       />
-      {formError.title &&
-      <span className={formStyles.errorFormStyle}>
-        {formError.title}
-      </span>}
+      {formError.title && (
+        <span className={formStyles.errorFormStyle}>
+          {formError.title}
+        </span>
+      )}
       <label htmlFor="description" className={formStyles.labelFormStyle}>
         Description (optional)
       </label>
@@ -43,10 +62,11 @@ function TaskForm({
         rows="3"
         className={`${formStyles.inputFormStyle} resize-y min-h-20`}
       />
-      {formError.description &&
-      <span className={formStyles.errorFormStyle}>
-        {formError.description}
-      </span>}
+      {formError.description && (
+        <span className={formStyles.errorFormStyle}>
+          {formError.description}
+        </span>
+      )}
       <label htmlFor="due_date" className={formStyles.labelFormStyle}>
         Due Date
       </label>
@@ -59,16 +79,18 @@ function TaskForm({
         required
         className={formStyles.inputFormStyle}
       />
-      {formError.due_date &&
-      <span className={formStyles.errorFormStyle}>
-        {formError.due_date}
-      </span>}
+      {formError.due_date && (
+        <span className={formStyles.errorFormStyle}>
+          {formError.due_date}
+        </span>
+      )}
       <div className="flex flex-wrap">
         <label htmlFor="tag" className={formStyles.labelFormStyle}>
           Tag
         </label>
         <input
           type="text"
+          id="tag"
           value={tagSearch}
           onChange={(e) => setTagSearch(e.target.value.toLowerCase())}
           placeholder="Search tags"

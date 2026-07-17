@@ -80,8 +80,7 @@ Copy `.env.example` to `.env` in both `backend/` and `frontend/`, then fill in t
 Open two Command Prompt windows.
 ## Step 1: Start Backend Server 
 ```
-cd backend
-python -m uvicorn app:app --reload
+
 ```
 ## Step 2: Start Frontend
 ```
@@ -90,6 +89,14 @@ npm run dev
 ```
 
 # 🎮 Test the App
+## Guest Preview
+Open the app without logging in to see a read-only preview: 3 sample tasks (one ongoing, one overdue, one completed) and 3 sample tags (work, school, urgent). Add/edit/delete is disabled in this mode.
+## Demo Account
+A demo account is seeded automatically the first time the backend runs:
+- **Email:** abc@abc.com
+- **Password:** 123abc???
+It comes pre-loaded with the same 3 default tags and 6 sample tasks (mixed ongoing/overdue/completed).
+## Try These Actions
 1. **Add a task**: Click "Add Task", fill the form and attach tags if needed, click "Add Task"
 2. **Complete it**: Click "✅ Done" button
 3. **Delete it**: Click "🗑️ Delete" button

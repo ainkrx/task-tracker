@@ -5,7 +5,45 @@ import TagForm from '../components/TagForm';
 import TagFilterBar from '../components/TagFilterBar';
 import TaskList from '../components/TaskList';
 
-function Tasks() {
+const ONE_DAY_MS = 24*60*60*1000;
+const daysFromNow = (days) => new Date(Date.now() + days * ONE_DAY_MS).toISOString();
+const DUMMY_TAGS = [
+  { id: -1, name: 'work' },
+  { id: -2, name: 'school' },
+  { id: -3, name: 'urgent' },
+];
+const DUMMY_TASKS = [
+  {
+    id: -1,
+    title: 'Sample Task',
+    description: 'This is a preview task for guests.',
+    completed: false,
+    due_date: daysFromNow(1), // ongoing
+    tags: [DUMMY_TAGS[0], DUMMY_TAGS[1]],
+    created_at: daysFromNow(-1),
+  },
+  {
+    id: -2,
+    title: 'Finish Report',
+    description: 'This task is overdue.',
+    completed: false,
+    due_date: daysFromNow(-2), // overdue
+    tags: [DUMMY_TAGS[0], DUMMY_TAGS[2]],
+    created_at: daysFromNow(-4),
+  },
+  {
+    id: -3,
+    title: 'Submit Homework',
+    description: 'This task is already done.',
+    completed: true,
+    due_date: daysFromNow(-5), // completed
+    tags: [DUMMY_TAGS[1], DUMMY_TAGS[2]],
+    created_at: daysFromNow(-7),
+  },
+];
+
+function Tasks({ token }) {
+  const isGuest = !token;
   const [tasks, setTasks] = useState([]);
   const [tags, setTags] = useState([]);
   const [sortedTags, setSortedTags] = useState([]);
@@ -33,14 +71,18 @@ function Tasks() {
   useEffect(() => {
     fetchTasks();
     fetchTags();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     setSortedTags([...tags].sort((a, b) => a.name.localeCompare(b.name)));
   }, [tags]);
 
-
   const fetchTasks = async () => {
+    if (isGuest) {
+      setTasks(DUMMY_TASKS);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -55,38 +97,16 @@ function Tasks() {
   };
   
   const fetchTags = async () => {
+    if (isGuest) {
+      setTags(DUMMY_TAGS);
+      return;
+    }
     try {
       let tags = (await api.get(`/tags/`)).data;
       setTags(tags);
     } catch (err) {
       console.error('Error fetching tags:', err);
     }
-  };
-
-  const handleTaskInputChange = (event) => {
-    const { name, value, type, checked } = event.target;
-    setTaskForm((prev) => {
-      if (type === 'checkbox' && Array.isArray(prev[name])) {
-        return {
-          ...prev,
-          [name]: checked
-          ? [...prev[name], value]
-          : prev[name].filter(v => v !== value)
-        };
-      }
-      return {
-        ...prev,
-        [name]: value
-      };
-    });
-  };
-
-  const handleTagInputChange = (event) => {
-    const { name, value } = event.target;
-    setTagForm((prev) => ({
-      ...prev,
-      [name]: value.toLowerCase(),
-    }));
   };
 
   const createTask = async (event) => {
@@ -310,15 +330,13 @@ function Tasks() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-20">
-      <header className="text-center mb-10">
-        <h1 className="text-4xl text-blue-900 font-bold">
-          📝 Task Tracker
-        </h1>
-        <p className="text-blue-700">
-          Organize your day, one task at a time
-        </p>
-      </header>
+    <>
+      {isGuest && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 text-sm rounded-lg px-4 py-2 mb-4 text-center">
+          You're viewing sample data as a guest. Any attempt to add, edit, or delete will fail. <br />
+          Log in to make changes.
+        </div>
+      )}
       <div className="relative" ref={formRef}>
         <div className="absolute left-full top-5 flex flex-col gap-5">
           <button
@@ -354,7 +372,7 @@ function Tasks() {
         {!showTagForm && (
           <TaskForm
             taskForm={taskForm}
-            handleTaskInputChange={handleTaskInputChange}
+            setTaskForm={setTaskForm}
             formError={formError}
             editingId={editingId}
             onSubmit={editingId ? updateTask : createTask}
@@ -368,7 +386,7 @@ function Tasks() {
         {showTagForm && (
           <TagForm
             tagForm={tagForm}
-            handleTagInputChange={handleTagInputChange}
+            setTagForm={setTagForm}
             formError={formError}
             editingId={editingId}
             onSubmit={editingId ? updateTag : createTag}
@@ -398,7 +416,7 @@ function Tasks() {
         handleTagFilter={handleTagFilter}
         filterTagIds={filterTagIds}
       />
-    </div>
+    </>
   );
 }
 

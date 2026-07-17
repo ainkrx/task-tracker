@@ -8,10 +8,13 @@ uvicorn[standard]==0.27.0
 sqlalchemy==2.0.25
 # Pydantic - Data validation using Python type hints
 pydantic==2.5.3
+# Passlib - Password hashing library
+passlib[bcrypt]==1.7.4
+# Bcrypt - pinned explicitly, passlib 1.7.4 is incompatible with bcrypt>=4.1
+bcrypt==4.0.1
+# python-jose - JWT (JSON Web Token) encoding and decoding
+python-jose[cryptography]==3.3.0
+
 # Psycopg2 - PostgreSQL database driver for SQLAlchemy 
 # Not required locally, only needed when deploying (Postgres)
 psycopg2-binary==2.9.9
-# Passlib - Password hashing library
-passlib[bcrypt]==1.7.4
-# python-jose - JWT (JSON Web Token) encoding and decoding
-python-jose[cryptography]==3.3.0

@@ -45,6 +45,7 @@ function TagFilterBar({
         </label>
         <input
           type="text"
+          id="tag"
           value={tagSearch}
           onChange={(e) => setTagSearch(e.target.value.toLowerCase())}
           placeholder="Search task based on tag"
