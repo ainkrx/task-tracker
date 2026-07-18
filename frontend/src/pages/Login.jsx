@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api from '../api/client';
 import * as formStyles from '../styles/formStyles';
 
-function Login({ onLoginSuccess }) {
+function Login({ onLoginSuccess, setToast }) {
   const [loginForm, setLoginForm] = useState({
     email: '',
     password: '',
@@ -26,7 +26,10 @@ function Login({ onLoginSuccess }) {
       onLoginSuccess?.(access_token);
     } catch (err) {
       console.error('Error logging in:', err);
-      alert('Failed to log in');
+      setToast?.({
+        message: 'Failed to log in.',
+        type: 'error'
+      });
       if (err.response?.status === 401) {
         setFormError({
           email: 'Invalid email or password.',

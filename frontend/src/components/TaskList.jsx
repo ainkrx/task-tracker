@@ -12,7 +12,7 @@ function TaskList({
 }) {
   if (error) {
     return (
-      <div className="bg-pink-200 text-red-500 px-5 py-4 rounded mb-5 border-l-4 border-red-500">
+      <div className="bg-pink-200 text-red-600 px-5 py-4 rounded mb-5 border-l-4 border-red-500">
         ❌ {error}
       </div>
     );
@@ -47,7 +47,7 @@ function TaskList({
                 </h3>
               </div>
               <p className={`text-sm mr-2.5 text-right
-                ${!task.completed && new Date(task.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-slate-600'}
+                ${!task.completed && new Date(task.due_date) < new Date() ? 'text-red-700 font-medium' : 'text-slate-600'}
                 `}
               >
                 {task.completed
@@ -99,7 +99,7 @@ function TaskList({
                     className={`px-2.5 py-1 border rounded-full text-sm cursor-pointer
                       ${filterTagIds.includes(tag.id)
                         ? 'bg-sky-600 text-white border-sky-600'
-                        : 'bg-sky-50 text-sky-700 border-gray-300'
+                        : 'bg-sky-50 text-sky-600 border-gray-300'
                     }`}
                   >
                     #{tag.name}

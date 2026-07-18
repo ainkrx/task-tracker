@@ -96,7 +96,7 @@ function TaskForm({
           placeholder="Search tags"
           className={formStyles.inputFormStyle}
         />
-        <div className="flex flex-wrap gap-2 mt-3 max-h-28 overflow-y-auto">
+        <div className="flex flex-wrap w-full gap-2 mt-3 max-h-28 overflow-y-auto">
           {sortedTags.filter(t => t.name.includes(tagSearch)).map((tag) => (
             <button
               key={tag.id}
@@ -108,8 +108,8 @@ function TaskForm({
               }
               className={`px-2.5 py-1 border rounded-full text-sm cursor-pointer
                 ${selectedTagIds.includes(tag.id)
-                  ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'bg-emerald-50 text-emerald-700 border-gray-300'
+                  ? 'bg-emerald-600 border-emerald-600 hover:bg-emerald-800 text-white'
+                  : 'bg-emerald-50 border-gray-300 hover:bg-emerald-300 text-emerald-600'
               }`}
             >
               #{tag.name}

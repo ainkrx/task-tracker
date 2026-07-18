@@ -80,7 +80,8 @@ Copy `.env.example` to `.env` in both `backend/` and `frontend/`, then fill in t
 Open two Command Prompt windows.
 ## Step 1: Start Backend Server 
 ```
-
+cd backend
+python -m uvicorn app:app --reload
 ```
 ## Step 2: Start Frontend
 ```

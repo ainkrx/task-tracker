@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api from '../api/client';
 import * as formStyles from '../styles/formStyles';
 
-function Register({ onRegisterSuccess }) {
+function Register({ onRegisterSuccess, setToast }) {
   const [registerForm, setRegisterForm] = useState({
     name: '',
     email: '',
@@ -27,10 +27,16 @@ function Register({ onRegisterSuccess }) {
       onRegisterSuccess?.();
     } catch (err) {
       if (err.response?.status === 409) {
-        alert('That email is already registered.');
+        setToast?.({
+          message: 'That email is already registered.',
+          type: 'error'
+        });
       } else {
         console.error('Error registering:', err);
-        alert('Failed to register');
+        setToast?.({
+          message: 'Failed to register.',
+          type: 'error'
+        });
         const errors = {};
         err.response?.data?.detail?.forEach((d) => { errors[d.loc[1]] = d.msg; });
         setFormError(errors);

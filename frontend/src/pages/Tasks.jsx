@@ -5,6 +5,7 @@ import TagForm from '../components/TagForm';
 import TagFilterBar from '../components/TagFilterBar';
 import TaskList from '../components/TaskList';
 
+const PAGE_SIZE = 5;
 const ONE_DAY_MS = 24*60*60*1000;
 const daysFromNow = (days) => new Date(Date.now() + days * ONE_DAY_MS).toISOString();
 const DUMMY_TAGS = [
@@ -42,8 +43,9 @@ const DUMMY_TASKS = [
   },
 ];
 
-function Tasks({ token }) {
+function Tasks({ token, setToast }) {
   const isGuest = !token;
+  const [currentPage, setCurrentPage] = useState(1);
   const [tasks, setTasks] = useState([]);
   const [tags, setTags] = useState([]);
   const [sortedTags, setSortedTags] = useState([]);
@@ -76,6 +78,57 @@ function Tasks({ token }) {
   useEffect(() => {
     setSortedTags([...tags].sort((a, b) => a.name.localeCompare(b.name)));
   }, [tags]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterTagIds, statusFilter]);
+
+
+  const handleTagFilter = (tagId) => {
+    setFilterTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
+  };
+
+  const getTagFilteredTasks = () => {
+    if (filterTagIds.length === 0) return tasks;
+    return tasks.filter((task) => {
+      const taskTagIds = task.tags.map((tag) => tag.id);
+      return filterTagIds.every((id) => taskTagIds.includes(id));
+    });
+  };
+
+  const getStatusCounts = () => {
+    const tagFiltered = getTagFilteredTasks();
+    const isOverdue = (task) => !task.completed && new Date(task.due_date) < new Date();
+    return {
+      all: tagFiltered.length,
+      ongoing: tagFiltered.filter((task) => !task.completed && !isOverdue(task)).length,
+      overdue: tagFiltered.filter(isOverdue).length,
+      completed: tagFiltered.filter((task) => task.completed).length,
+    };
+  };
+
+  const getVisibleTasks = () => {
+    const sortByDue = (a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      return new Date(a.due_date) - new Date(b.due_date);
+    };
+    const matchesStatus = (task) => {
+      if (statusFilter === 'all') return true;
+      const isOverdue = !task.completed && new Date(task.due_date) < new Date();
+      if (statusFilter === 'completed') return task.completed;
+      if (statusFilter === 'overdue') return isOverdue;
+      if (statusFilter === 'ongoing') return !task.completed && !isOverdue;
+    };
+    if (filterTagIds.length === 0) return [...tasks].sort(sortByDue).filter(matchesStatus);
+    return tasks.filter((task) => {
+      const taskTagIds = task.tags.map((tag) => tag.id);
+      return filterTagIds.every((id) => taskTagIds.includes(id));
+    }).sort(sortByDue).filter(matchesStatus);
+  };
+
+  const visibleTasks = getVisibleTasks();
+  const totalPages = Math.max(1, Math.ceil(visibleTasks.length / PAGE_SIZE));
+  const paginatedTasks = visibleTasks.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const fetchTasks = async () => {
     if (isGuest) {
@@ -125,9 +178,16 @@ function Tasks({ token }) {
       });
       setTasks([...tasks, newTask]);
       setSelectedTagIds([]);
+      setToast({
+        message: 'Task added successfully!',
+        type: 'success'
+      });
     } catch (err) {
       console.error('Error creating task:', err);
-      alert('Failed to create task');
+      setToast({
+        message: 'Failed to create task.',
+        type: 'error'
+      });
       const errors = {};
       err.response?.data?.detail?.forEach(d => {
         errors[d.loc[1]] = d.msg;
@@ -173,9 +233,16 @@ function Tasks({ token }) {
       setTasks(tasks.map((task) => (task.id === editingId ? updatedTask : task)));
       setEditingId(null);
       setSelectedTagIds([]);
+      setToast({
+        message: 'Task updated successfully!',
+        type: 'success'
+      });
     } catch (err) {
       console.error('Error updating task:', err);
-      alert('Failed to update task');
+      setToast({
+        message: 'Failed to update task.',
+        type: 'error'
+      });
       const errors = {};
       err.response?.data?.detail?.forEach(d => {
         errors[d.loc[1]] = d.msg;
@@ -193,7 +260,10 @@ function Tasks({ token }) {
       setTasks(tasks.map((task) => task.id === taskId ? updatedTask : task));
     } catch (err) {
       console.error('Error updating task:', err);
-      alert('Failed to update task');
+      setToast({
+        message: 'Failed to update task.',
+        type: 'error'
+      });
     }
   };
 
@@ -206,26 +276,11 @@ function Tasks({ token }) {
       setTasks(tasks.filter((task) => task.id !== taskId));
     } catch (err) {
       console.error('Error deleting task:', err);
-      alert('Failed to delete task');
+      setToast({
+        message: 'Failed to delete task.',
+        type: 'error'
+      });
     }
-  };
-
-  const backButton = () => {
-    if (!window.confirm('Are you sure? All changes will be lost.')) {
-      return;
-    }
-    setFormError({});
-    setTaskForm({
-      title: '',
-      description: '',
-      completed: false,
-      due_date: ''
-    });
-    setTagForm({
-      name: ''
-    });
-    setEditingId(null);
-    setSelectedTagIds([]);
   };
 
   const createTag = async (event) => {
@@ -237,15 +292,25 @@ function Tasks({ token }) {
         name: ''
       });
       setTags((prev) => [...prev, newTag]);
+      setToast({
+        message: 'Tag added successfully!',
+        type: 'success'
+      });
     } catch (err) {
       if (err.response?.status === 409) {
-        alert('That tag name already exists.');
+        setToast({
+          message: 'That tag name already exists.',
+          type: 'error'
+        });
       } else {
         const errors = {};
         err.response?.data?.detail?.forEach((d) => { errors[d.loc[1]] = d.msg; });
         setFormError(errors);
         console.error('Error creating tag:', err);
-        alert('Failed to create tag');
+        setToast({
+          message: 'Failed to create tag.',
+          type: 'error'
+        });
       }
     }
   };
@@ -276,12 +341,22 @@ function Tasks({ token }) {
         tags: task.tags.map((tag) => (tag.id === editingId ? updatedTag : tag))
       })));
       setEditingId(null);
+      setToast({
+        message: 'Tag updated successfully!',
+        type: 'success'
+      });
     } catch (err) {
       if (err.response?.status === 409) {
-        alert('That tag name already exists.');
+        setToast({
+          message: 'That tag name already exists.',
+          type: 'error'
+        });
       } else {
         console.error('Error updating tag:', err);
-        alert('Failed to update tag');
+        setToast({
+          message: 'Failed to update tag.',
+          type: 'error'
+        });
         const errors = {};
         err.response?.data?.detail?.forEach(d => {
           errors[d.loc[1]] = d.msg;
@@ -302,37 +377,35 @@ function Tasks({ token }) {
       fetchTasks();
     } catch (err) {
       console.error('Error deleting tag:', err);
-      alert('Failed to delete tag');
+      setToast({
+        message: 'Failed to delete tag.',
+        type: 'error'
+      });
     }
   };
 
-  const handleTagFilter = (tagId) => {
-    setFilterTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
-  };
-
-  const getVisibleTasks = () => {
-    const sortByDue = (a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      return new Date(a.due_date) - new Date(b.due_date);
-    };
-    const matchesStatus = (task) => {
-      if (statusFilter === 'all') return true;
-      const isOverdue = !task.completed && new Date(task.due_date) < new Date();
-      if (statusFilter === 'completed') return task.completed;
-      if (statusFilter === 'overdue') return isOverdue;
-      if (statusFilter === 'ongoing') return !task.completed && !isOverdue;
-    };
-    if (filterTagIds.length === 0) return [...tasks].sort(sortByDue).filter(matchesStatus);
-    return tasks.filter((task) => {
-      const taskTagIds = task.tags.map((tag) => tag.id);
-      return filterTagIds.every((id) => taskTagIds.includes(id));
-    }).sort(sortByDue).filter(matchesStatus);
+  const backButton = () => {
+    if (!window.confirm('Are you sure? All changes will be lost.')) {
+      return;
+    }
+    setFormError({});
+    setTaskForm({
+      title: '',
+      description: '',
+      completed: false,
+      due_date: ''
+    });
+    setTagForm({
+      name: ''
+    });
+    setEditingId(null);
+    setSelectedTagIds([]);
   };
 
   return (
     <>
       {isGuest && (
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 text-sm rounded-lg px-4 py-2 mb-4 text-center">
+        <div className="bg-yellow-100 border border-yellow-500 text-yellow-800 text-sm rounded-lg px-4 py-2 mb-4 text-center">
           You're viewing sample data as a guest. Any attempt to add, edit, or delete will fail. <br />
           Log in to make changes.
         </div>
@@ -352,7 +425,7 @@ function Tasks({ token }) {
           <button
             type="button"
             onClick={() => { setShowTagForm(true); setEditingId(null); }} disabled={showTagForm}
-            className={`rounded-r-lg px-2 py-1.5 text-sm shadow-md transition
+            className={`rounded-r-lg px-5 py-1.5 text-sm shadow-md transition
               ${showTagForm
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-700 hover:bg-blue-900 text-white cursor-pointer'}
@@ -405,6 +478,7 @@ function Tasks({ token }) {
         deleteTag={deleteTag}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
+        statusCounts={getStatusCounts()}
       />
       <TaskList
         error={error}
@@ -416,6 +490,27 @@ function Tasks({ token }) {
         handleTagFilter={handleTagFilter}
         filterTagIds={filterTagIds}
       />
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-4">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            Prev
+          </button>
+          <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </>
   );
 }

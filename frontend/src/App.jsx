@@ -4,12 +4,14 @@ import api from './api/client';
 import Tasks from './pages/Tasks';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Toast from './components/Toast';
 import Navbar from './components/Navbar';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('access_token'));
   const [userName, setUserName] = useState('');
   const [view, setView] = useState('tasks');
+  const [toast, setToast] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -44,10 +46,18 @@ function App() {
   const handleLoginSuccess = (accessToken) => {
     setToken(accessToken);
     setView('tasks');
+    setToast({ 
+      message: 'Logged in successfully!',
+      type: 'success'
+    });
   };
 
   const handleRegisterSuccess = () => {
     setView('login');
+    setToast({ 
+      message: 'Registered successfully! Please log in.',
+      type: 'success'
+    });
   };
 
   const handleLogout = () => {
@@ -64,6 +74,11 @@ function App() {
         onSettings={() => setView('profile')}
         onLogout={handleLogout}
       />
+      <Toast 
+        message={toast?.message} 
+        type={toast?.type} 
+        onClose={() => setToast(null)} 
+      />
       <main>
         <div className="max-w-4xl mx-auto p-20">
           <header className="text-center mb-10">
@@ -74,9 +89,9 @@ function App() {
               Organize your day, one task at a time
             </p>
           </header>
-          {view === 'login' && <Login onLoginSuccess={handleLoginSuccess} />}
-          {view === 'register' && <Register onRegisterSuccess={handleRegisterSuccess} />}
-          {view === 'tasks' && <Tasks token={token} />}
+          {view === 'login' && <Login onLoginSuccess={handleLoginSuccess} setToast={setToast} />}
+          {view === 'register' && <Register onRegisterSuccess={handleRegisterSuccess} setToast={setToast} />}
+          {view === 'tasks' && <Tasks token={token} setToast={setToast} />}
         </div>
       </main>
     </>
