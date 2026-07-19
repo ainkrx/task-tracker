@@ -39,15 +39,11 @@ def create_access_token(data: dict):
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-# SQLite
-engine = create_engine(
-    DATABASE_URL,
-    # https://fastapi.tiangolo.com/tutorial/sql-databases/#create-an-engine
-    # 1 request session per thread
-    connect_args={"check_same_thread": False}
-)
-# neon
-# engine = create_engine(DATABASE_URL)
+# SQLite needs check_same_thread=False for 1 request session per thread;
+# Postgres (e.g. Neon) doesn't support that option, so only pass it for SQLite.
+# https://fastapi.tiangolo.com/tutorial/sql-databases/#create-an-engine
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
